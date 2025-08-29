@@ -7,6 +7,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import TimeoutException, NoSuchElementException, WebDriverException
 import os
 from logger import logger
+from locators import LOCATORS
 
 
 def init_driver():
@@ -63,6 +64,7 @@ def load_page_with_retry(driver, url, max_attempts=3):
 
 
 def click_element(driver, xpath: str, description: str, timeout: int = 8):
+
     """Кликает по элементу с ожиданием"""
     start = time.time()
     try:
@@ -83,3 +85,36 @@ def click_element(driver, xpath: str, description: str, timeout: int = 8):
     except Exception as e:
         logger.error(f"Неожиданная ошибка при клике {description}: {str(e)}")
         return False
+def parse_car_row(row):
+    """Парсит строку с данными о машине"""
+    car_data = {
+        "car_id": row.get_attribute("data-carid") or "",
+        "brand": get_text_safe(row, LOCATORS["brand"]),
+        "model": get_text_safe(row, LOCATORS["model"]),
+        "engine": get_text_safe(row, LOCATORS["engine"]),
+        "trim": get_text_safe(row, LOCATORS["trim"]),
+        "registration_date": get_text_safe(row, LOCATORS["registration_date"]).replace("식", ""),
+        "mileage": get_text_safe(row, LOCATORS["mileage"]).replace("km", "").replace(",", "").strip(),
+        "fuel_type": get_text_safe(row, LOCATORS["fuel_type"]),
+        "location": get_text_safe(row, LOCATORS["location"]),
+        "price": get_text_safe(row, LOCATORS["price"]).replace(",", "").replace("만원", "").strip(),
+        "url": get_attr_safe(row, LOCATORS["url"], "href"),
+        "image_url": get_attr_safe(row, LOCATORS["image_url"], "src"),
+    }
+    return car_data
+
+
+
+def get_text_safe(row, xpath):
+    """Возвращает текст элемента по XPath или пустую строку"""
+    try:
+        return row.find_element("xpath", xpath).text.strip()
+    except NoSuchElementException:
+        return ""
+
+def get_attr_safe(row, xpath, attr):
+    """Возвращает атрибут элемента по XPath или пустую строку"""
+    try:
+        return row.find_element("xpath", xpath).get_attribute(attr)
+    except NoSuchElementException:
+        return ""

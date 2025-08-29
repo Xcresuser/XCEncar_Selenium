@@ -1,45 +1,60 @@
+import os
 import time
 from logger import logger
-from helpers import init_driver, click_element, load_page_with_retry
+from helpers import init_driver, click_element, load_page_with_retry, parse_car_row
 from locators import LOCATORS
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+import csv
+from selenium.webdriver.common.by import By
+from helpers import init_driver
+
 
 
 def run_script():
     start_time = time.time()
     driver = init_driver()
+    cars = []
 
     try:
-        # Загрузка страницы с повторными попытками
         if not load_page_with_retry(driver, "https://www.encar.com"):
             logger.error("Не удалось загрузить страницу. Прерывание выполнения.")
             return
-        # Правильный порядок аргументов: driver, xpath, description, timeout
-        click_element(driver, LOCATORS["manufact"], "Выбор производителя")
-        click_element(driver, LOCATORS["brand"], "Выбор бренда")
-        click_element(driver, LOCATORS["model"], "Выбор модели")
-        click_element(driver, LOCATORS["year"], "Выбор года")
-        click_element(driver, LOCATORS["search_button"], "Кнопка поиска")
-        
 
-        time.sleep(20)  # оставить, чтобы проверить результат
+        # Кликаем по фильтрам
+        for step in ["manufact", "brand1", "series", "year", "search_button"]:
+            click_element(driver, LOCATORS[step], f"Клик: {step}", 10)
+
+        # Ждем таблицу с машинами
+        wait = WebDriverWait(driver, 20)
+        wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "tr[data-impression]")))
+
+        rows = driver.find_elements(By.CSS_SELECTOR, "tr[data-impression]")
+        logger.info(f"Найдено {len(rows)} автомобилей")
+
+        for row in rows:
+            car_data = parse_car_row(row)
+            if car_data:
+                cars.append(car_data)
+
+        if cars:
+            keys = cars[0].keys()
+            file_exists = os.path.isfile("cars.csv")
+
+            with open("cars.csv", "a", newline="", encoding="utf-8") as f:
+                writer = csv.DictWriter(f, fieldnames=keys)
+                if not file_exists:
+                    writer.writeheader()
+                writer.writerows(cars)
+
+            logger.info(f"✅ Данные сохранены ({len(cars)} записей)")
 
     except Exception as e:
-        logger.error(f"Ошибка во время выполнения скрипта: {str(e)}")
-        # Сохраняем скриншот для отладки
-        try:
-            driver.save_screenshot("error.png")
-            logger.info("Скриншот ошибки сохранен как error.png")
-        except:
-            logger.error("Не удалось сохранить скриншот ошибки")
+        logger.error(f"Ошибка: {e}")
+        driver.save_screenshot("error.png")
     finally:
-        try:
-            driver.quit()
-            logger.info("Браузер закрыт")
-        except:
-            logger.warning("Не удалось корректно закрыть браузер")
-        
-        logger.info(f"Общее время выполнения: {time.time() - start_time:.2f} сек")
-
+        driver.quit()
+        logger.info(f"Время работы: {time.time() - start_time:.2f} сек")
 
 if __name__ == "__main__":
     run_script()
