@@ -85,10 +85,21 @@ def click_element(driver, xpath: str, description: str, timeout: int = 8):
     except Exception as e:
         logger.error(f"Неожиданная ошибка при клике {description}: {str(e)}")
         return False
+
+def get_data_impression(element, part_index=0):
+    try:
+        data_impression = element.get_attribute("data-impression")
+        if data_impression:
+            parts = data_impression.split('|')
+            return parts[part_index] if part_index < len(parts) else ""
+    except:
+        return ""
+    return ""
+
 def parse_car_row(row):
     """Парсит строку с данными о машине"""
     car_data = {
-        "car_id": row.get_attribute("data-carid") or "",
+        "car_list": get_data_impression(row, 0),
         "brand": get_text_safe(row, LOCATORS["brand"]),
         "model": get_text_safe(row, LOCATORS["model"]),
         "engine": get_text_safe(row, LOCATORS["engine"]),

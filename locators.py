@@ -7,6 +7,7 @@ LOCATORS = {
     "year": "//*[@id='mdlItemList']/li[2]/a",
     "search_button": "//*[@id='indexSch1']/div[1]/a",
     "rows" : "//*[@id='sr_normal']",
+    "car_list": "//*[@id='sr_normal']/tr[@data-impression]",
     "brand": ".//span[@class='cls']/strong",
     "model": ".//span[@class='cls']/em",
     "engine": ".//span[@class='dtl']/strong",
